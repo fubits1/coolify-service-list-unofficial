@@ -1,0 +1,207 @@
+---
+interface Props {
+  name: string;
+  logo?: string;
+  slogan: string;
+  type: string;
+  tags?: string[];
+  documentation?: string;
+}
+
+const { name, logo, slogan, type, tags, documentation } = Astro.props;
+const ASSET_URL = 'https://raw.githubusercontent.com/coollabsio/coolify/refs/heads/main/public/';
+---
+
+<div class="template-row">
+  <div class="logo-column">
+    {logo && <img src={`${ASSET_URL}${logo}`} alt={`${name} logo`} class="template-logo" />}
+  </div>
+  <div class="content-column">
+    <h2>
+      {name}
+      {
+        documentation && (
+          <a
+            href={documentation}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="docs-link"
+            title="View documentation"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+          </a>
+        )
+      }
+    </h2>
+    <p class="slogan">{slogan}</p>
+    <div class="meta">
+      <span class="type-label">Type: <span class="type-value">{type}</span></span>
+      {
+        tags && (
+          <div class="tags">
+            {tags.map((tag) => (
+              <button class="tag" data-tag={tag}>
+                {tag}
+              </button>
+            ))}
+          </div>
+        )
+      }
+    </div>
+  </div>
+</div>
+
+<script>
+  let selectedTags = new Set();
+  const selectedTagsContainer = document.getElementById('selected-tags');
+  const templateRows = document.querySelectorAll('.template-row');
+
+  function updateSelectedTags() {
+    if (selectedTagsContainer) {
+      selectedTagsContainer.innerHTML =
+        selectedTags.size > 0
+          ? `<span class="filter-label">Filtered by:</span> ${Array.from(selectedTags)
+              .map((tag) => `<button class="tag selected" data-tag="${tag}">${tag}</button>`)
+              .join('')}`
+          : '';
+    }
+
+    // Update visibility of template rows
+    templateRows.forEach((row) => {
+      if (selectedTags.size === 0) {
+        row.style.display = 'grid';
+        return;
+      }
+
+      const rowTags = Array.from(row.querySelectorAll('.tag')).map((tag) => tag.dataset.tag);
+      const hasAllSelectedTags = Array.from(selectedTags).every((tag) => rowTags.includes(tag));
+      row.style.display = hasAllSelectedTags ? 'grid' : 'none';
+    });
+
+    // Update counter
+    const visibleItems = Array.from(templateRows).filter(
+      (row) => row.style.display !== 'none'
+    ).length;
+    const totalItems = templateRows.length;
+    const counterElement = document.getElementById('items-counter');
+    if (counterElement) {
+      counterElement.textContent = `Showing ${visibleItems} of ${totalItems} items`;
+    }
+
+    // Update all tag buttons to show selected state
+    document.querySelectorAll('.tag').forEach((tagBtn) => {
+      tagBtn.classList.toggle('selected', selectedTags.has(tagBtn.dataset.tag));
+    });
+  }
+
+  function handleTagClick(e) {
+    const tagBtn = e.target.closest('.tag');
+    if (!tagBtn || !tagBtn.dataset.tag) return;
+
+    const tag = tagBtn.dataset.tag;
+    if (selectedTags.has(tag)) {
+      selectedTags.delete(tag);
+    } else {
+      selectedTags.add(tag);
+    }
+
+    updateSelectedTags();
+  }
+
+  // Add click handlers
+  document.addEventListener('click', handleTagClick);
+</script>
+
+<style>
+  .template-row {
+    display: grid;
+    grid-template-columns: 100px 1fr;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    border: 1px solid rgba(var(--accent-light), 25%);
+    background: linear-gradient(rgba(var(--accent-dark), 66%), rgba(var(--accent-dark), 33%));
+    border-radius: 8px;
+    transition: transform 0.2s ease-in-out;
+  }
+  .logo-column {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+  }
+  .template-logo {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+  }
+  .template-row:hover {
+    transform: translateX(5px);
+  }
+  .template-row h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: rgb(var(--accent-light));
+  }
+  .docs-link {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 0.5rem;
+    color: rgb(var(--accent-light));
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+  }
+  .docs-link:hover {
+    opacity: 1;
+  }
+  .description {
+    margin: 0.5rem 0;
+    color: #ccc;
+  }
+  .meta {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .tags {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .tag {
+    background: rgba(var(--accent), 0.2);
+    padding: 0.2rem 0.6rem;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    color: rgb(var(--accent-light));
+    transition: background-color 0.2s ease;
+  }
+  .tag:hover {
+    background: rgba(var(--accent), 0.4);
+  }
+  .tag.selected {
+    background: rgba(var(--accent), 0.6);
+  }
+  .type-label {
+    color: #ccc;
+    font-size: 0.9rem;
+  }
+  .type-value {
+    color: rgb(var(--accent-light));
+  }
+</style>
