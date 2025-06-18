@@ -136,6 +136,10 @@ const ASSET_URL = 'https://raw.githubusercontent.com/coollabsio/coolify/refs/hea
     background: linear-gradient(rgba(var(--accent-dark), 66%), rgba(var(--accent-dark), 33%));
     border-radius: 8px;
     transition: transform 0.2s ease-in-out;
+
+    @media (max-width: 500px) {
+      grid-template-columns: 1fr;
+    }
   }
   .logo-column {
     display: flex;

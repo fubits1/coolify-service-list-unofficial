@@ -31,10 +31,14 @@ const versionResponse = await fetch('https://cdn.coollabs.io/coolify/versions.js
 const versionData = await versionResponse.json();
 
 // Convert the object to an array of templates
-const templateArray = Object.entries(templates).map(([key, value]) => ({
-  name: key,
-  ...value,
-}));
+const templateArray = Object.entries(templates)
+  .map(([key, value]) => {
+    return {
+      name: key?.trim(),
+      ...value,
+    };
+  })
+  ?.sort((a, b) => a.name.localeCompare(b.name));
 ---
 
 <Layout title="Coolify Service Templates">
@@ -44,7 +48,9 @@ const templateArray = Object.entries(templates).map(([key, value]) => ({
       Coolify Service Templates
       <span class="subtitle">unofficial list</span>
     </h1>
-    <pre class="version-info">Current Coolify Version: {versionData.coolify.v4.version}</pre>
+    <code class="version-info"
+      >Current Coolify Version: <span class="nobr">{versionData.coolify.v4.version}</span></code
+    >
     <div id="selected-tags" class="selected-tags"></div>
     <div id="items-counter" class="items-counter">
       Showing all {templateArray.length} items
@@ -126,5 +132,9 @@ const templateArray = Object.entries(templates).map(([key, value]) => ({
     display: flex;
     flex-direction: column;
     gap: 1rem;
+  }
+
+  .nobr {
+    white-space: nowrap;
   }
 </style>
