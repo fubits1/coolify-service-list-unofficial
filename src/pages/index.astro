@@ -4,7 +4,17 @@ import TemplateCard from '../components/TemplateCard.astro';
 import { ViewTransitions } from 'astro:transitions';
 
 // Fetch the JSON data at build time
-let templates: Record<string, any> = {};
+let templates: Record<
+  string,
+  {
+    name: string;
+    logo: string;
+    slogan: string;
+    type: string;
+    tags: string[];
+    documentation: string;
+  }
+> = {};
 let error_msg: string | null = null;
 try {
   const response = await fetch(
