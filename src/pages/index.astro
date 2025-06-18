@@ -48,9 +48,11 @@ const templateArray = Object.entries(templates)
       Coolify Service Templates
       <span class="subtitle">unofficial list</span>
     </h1>
-    <code class="version-info"
-      >Current Coolify Version: <span class="nobr">{versionData.coolify.v4.version}</span></code
-    >
+    <div style="display: flex; justify-content: center; align-items: center">
+      <code class="version-info"
+        >Current Coolify Version: <span class="nobr">{versionData.coolify.v4.version}</span></code
+      >
+    </div>
     <div id="selected-tags" class="selected-tags"></div>
     <div id="items-counter" class="items-counter">
       Showing all {templateArray.length} items
@@ -103,9 +105,9 @@ const templateArray = Object.entries(templates)
   }
   .version-info {
     text-align: center;
-    margin-bottom: 2rem;
     padding: 0.5rem;
     background: rgba(var(--accent), 0.1);
+    border-radius: 4px;
   }
   .selected-tags {
     display: flex;

@@ -1,0 +1,41 @@
+---
+
+---
+
+<footer>
+  <div class="inner">
+    <code>Last Update: {new Date().toISOString().split('T')[0]}</code> | <a
+      href="https://github.com/fubits1/coolify-service-list-unofficial"
+    >
+      fubits1/coolify-service-list-unofficial
+    </a>
+  </div>
+</footer>
+
+<style>
+  footer {
+    /* position: sticky; */
+    /* bottom: 0.5rem; */
+    display: flex;
+    justify-content: center;
+    align-items: baseline;
+
+    & .inner {
+      display: flex;
+      justify-content: center;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background-color: rgba(var(--accent-dark), 66%);
+      border-radius: 8px;
+
+      color: #ececec;
+      font-size: 14px;
+
+      & a {
+        color: #ececec;
+      }
+    }
+  }
+</style>
