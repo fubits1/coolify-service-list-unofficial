@@ -8,7 +8,7 @@ let templates: Record<string, any> = {};
 let error_msg: string | null = null;
 try {
   const response = await fetch(
-    'https://raw.githubusercontent.com/coollabsio/coolify/refs/heads/main/templates/service-templates.json'
+    'https://raw.githubusercontent.com/coollabsio/coolify/refs/heads/v4.x/templates/service-templates.json'
   );
   templates = await response.json();
 } catch (error) {
