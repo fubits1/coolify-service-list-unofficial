@@ -3,17 +3,16 @@ import Layout from '../layouts/Layout.astro';
 import TemplateCard from '../components/TemplateCard.astro';
 import { ClientRouter } from 'astro:transitions';
 
+type Template = {
+  logo: string;
+  slogan: string;
+  category: string;
+  tags: string[];
+  documentation: string;
+};
+
 // Fetch the JSON data at build time
-let templates: Record<
-  string,
-  {
-    logo: string;
-    slogan: string;
-    category: string;
-    tags: string[];
-    documentation: string;
-  }
-> = {};
+let templates: Record<string, Template> = {};
 let error_msg: string | null = null;
 try {
   const response = await fetch(
@@ -29,15 +28,50 @@ try {
 const versionResponse = await fetch('https://cdn.coollabs.io/coolify/versions.json');
 const versionData = await versionResponse.json();
 
-// Convert the object to an array of templates
-const templateArray = Object.entries(templates)
-  .map(([key, value]) => {
-    return {
-      name: key?.trim(),
-      ...value,
-    };
-  })
-  ?.sort((a, b) => a.name.localeCompare(b.name));
+// Fetch the service page slugs from the Coolify docs repo
+const COOLIFY_DOCS_URL = 'https://coolify.io/docs/services/';
+let docsSlugs = new Set<string>();
+try {
+  const response = await fetch(
+    'https://api.github.com/repos/coollabsio/coolify-docs/contents/content/docs/services'
+  );
+  if (!response.ok) throw new Error(`GitHub API responded with ${response.status}`);
+
+  const entries: { name: string; type: string }[] = await response.json();
+  docsSlugs = new Set(
+    entries
+      .filter((entry) => entry.type === 'file' && entry.name.endsWith('.mdx'))
+      .map((entry) => entry.name.replace(/\.mdx$/, ''))
+  );
+} catch (error) {
+  console.error('Error fetching Coolify docs pages:', error);
+}
+
+// Group variants like wordpress-with-mysql / wordpress-without-database under their base name
+const toBaseName = (name: string) => name.replace(/-with(out)?-.*$/, '');
+const groups = new Map<string, (Template & { name: string })[]>();
+for (const [key, value] of Object.entries(templates)) {
+  const name = key.trim();
+  const baseName = toBaseName(name);
+  groups.set(baseName, [...(groups.get(baseName) ?? []), { name, ...value }]);
+}
+
+const templateArray = Array.from(groups, ([baseName, members]) => {
+  members.sort((a, b) => a.name.localeCompare(b.name));
+  const primary = members.find((member) => member.name === baseName) ?? members[0];
+  const docsSlug = [baseName, ...members.map((member) => member.name)].find((slug) =>
+    docsSlugs.has(slug)
+  );
+
+  return {
+    ...primary,
+    name: members.length > 1 ? baseName : primary.name,
+    categories: [...new Set([primary, ...members].map((member) => member.category))],
+    tags: [...new Set([primary, ...members].flatMap((member) => member.tags ?? []))],
+    variants: members.length > 1 ? members.map((member) => member.name) : [],
+    coolifyDocs: docsSlug ? `${COOLIFY_DOCS_URL}${docsSlug}` : undefined,
+  };
+}).sort((a, b) => a.name.localeCompare(b.name));
 ---
 
 <Layout title="Coolify Service Templates">
@@ -45,11 +79,23 @@ const templateArray = Object.entries(templates)
   <main>
     <h1>
       Coolify Service Templates
-      <span class="subtitle">unofficial list</span>
+      <a
+        class="subtitle"
+        href="https://github.com/coollabsio/coolify/blob/main/templates/service-templates.json"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        unofficial list
+      </a>
     </h1>
     <div style="display: flex; justify-content: center; align-items: center">
       <code class="version-info"
-        >Current Coolify Version: <span class="nobr">{versionData.coolify.v4.version}</span></code
+        >Current Coolify Version: <a
+          class="nobr"
+          href={`https://github.com/coollabsio/coolify/releases/tag/v${versionData.coolify.v4.version}`}
+          target="_blank"
+          rel="noopener noreferrer">v{versionData.coolify.v4.version}</a
+        ></code
       >
     </div>
     <div id="selected-tags" class="selected-tags"></div>
@@ -65,9 +111,11 @@ const templateArray = Object.entries(templates)
               name={template.name}
               logo={template.logo}
               slogan={template.slogan}
-              category={template.category}
+              categories={template.categories}
               tags={template.tags}
               documentation={template.documentation}
+              coolifyDocs={template.coolifyDocs}
+              variants={template.variants}
             />
           ))
       }
@@ -101,12 +149,32 @@ const templateArray = Object.entries(templates)
     font-weight: normal;
     color: rgba(var(--accent-light), 0.7);
     font-style: italic;
+
+    &:hover {
+      color: rgb(var(--accent-light));
+    }
+
+    &:focus-visible {
+      outline: 2px solid rgb(var(--accent-light));
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
   }
   .version-info {
     text-align: center;
     padding: 0.5rem;
     background: rgba(var(--accent), 0.1);
     border-radius: 4px;
+
+    & a {
+      color: rgb(var(--accent-light));
+
+      &:focus-visible {
+        outline: 2px solid rgb(var(--accent-light));
+        outline-offset: 2px;
+        border-radius: 2px;
+      }
+    }
   }
   .selected-tags {
     display: flex;
