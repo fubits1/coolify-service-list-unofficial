@@ -17,39 +17,41 @@ const ASSET_URL = 'https://raw.githubusercontent.com/coollabsio/coolify/refs/hea
     {logo && <img src={`${ASSET_URL}${logo}`} alt={`${name} logo`} class="template-logo" />}
   </div>
   <div class="content-column">
-    <h2>
-      {name}
-      {
-        documentation && (
-          <a
-            href={documentation}
-            target="_blank"
-            rel="noopener noreferrer"
-            class="docs-link"
-            title="View documentation"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
+    <div class="header">
+      <h2>
+        {name}
+        {
+          documentation && (
+            <a
+              href={documentation}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="docs-link"
+              title="View documentation"
             >
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-              <polyline points="15 3 21 3 21 9" />
-              <line x1="10" y1="14" x2="21" y2="3" />
-            </svg>
-          </a>
-        )
-      }
-    </h2>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+            </a>
+          )
+        }
+      </h2>
+      <button class="tag category" data-tag={category} title="Category">{category}</button>
+    </div>
     <p class="slogan">{slogan}</p>
     <div class="meta">
-      <span class="type-label">Category: <span class="type-value">{category}</span></span>
       {
         tags && (
           <div class="tags">
@@ -201,11 +203,23 @@ const ASSET_URL = 'https://raw.githubusercontent.com/coollabsio/coolify/refs/hea
   .tag.selected {
     background: rgba(var(--accent), 0.6);
   }
-  .type-label {
-    color: #ccc;
-    font-size: 0.9rem;
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
   }
-  .type-value {
-    color: rgb(var(--accent-light));
+  .tag.category {
+    flex-shrink: 0;
+    background: rgb(var(--accent));
+    color: white;
+    font-weight: 600;
+  }
+  .tag.category:hover {
+    background: rgba(var(--accent), 0.8);
+  }
+  .tag.category.selected {
+    outline: 2px solid rgb(var(--accent-light));
+    outline-offset: 2px;
   }
 </style>
