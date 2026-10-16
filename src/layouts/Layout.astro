@@ -1,20 +1,31 @@
 ---
+import { Font } from 'astro:assets';
 import Footer from '../components/Footer.astro';
-interface Props {
-  title: string;
-}
 
-const { title } = Astro.props;
+type Props = {
+  title: string;
+  description?: string;
+};
+
+const {
+  title,
+  description = "Unofficial, filterable list of Coolify's one-click service templates.",
+} = Astro.props;
 ---
 
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="description" content="Astro description" />
+    <meta name="description" content={description} />
     <meta name="viewport" content="width=device-width" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
+    <Font cssVariable="--font-sans" preload />
+    <Font cssVariable="--font-mono" preload />
     <title>{title}</title>
   </head>
   <body>
@@ -23,30 +34,121 @@ const { title } = Astro.props;
   </body>
 </html>
 <style is:global>
+  /**
+   * design tokens in three layers: primitives (raw Geist values),
+   * semantic (purpose), component (per-component overrides)
+   *
+   * grays follow Vercel's Geist scale (measured on vercel.com);
+   * violet is Coolify's brand gradient and is reserved for active
+   * filter state and focus
+   */
   :root {
-    --accent: 136, 58, 234;
-    --accent-light: 224, 204, 250;
-    --accent-dark: 49, 10, 101;
-    --accent-gradient: linear-gradient(
-      45deg,
-      rgb(var(--accent)),
-      rgb(var(--accent-light)) 30%,
-      white 60%
-    );
+    /* primitives: light */
+    --bg-100-light: #fff;
+    --bg-200-light: #fafafa;
+    --gray-100-light: #f2f2f2;
+    --gray-alpha-400-light: #00000014;
+    --gray-500-light: #c9c9c9;
+    --gray-700-light: #8f8f8f;
+    --gray-900-light: #4d4d4d;
+    --gray-1000-light: #171717;
+    --violet-light: #6f50e8;
+
+    /* primitives: dark */
+    --bg-100-dark: #0a0a0a;
+    --bg-200-dark: #000;
+    --gray-100-dark: #1a1a1a;
+    --gray-alpha-400-dark: #ffffff24;
+    --gray-500-dark: #454545;
+    --gray-650-dark: #6b6b6b;
+    --gray-900-dark: #a1a1a1;
+    --gray-1000-dark: #ededed;
+    --violet-dark: #8b73ff;
+
+    /* semantic */
+    --color-bg: var(--bg-200-light);
+    --color-surface: var(--bg-100-light);
+    --color-surface-hover: var(--gray-100-light);
+    --color-border: var(--gray-alpha-400-light);
+    --color-border-hover: var(--gray-500-light);
+    --color-control-border: var(--gray-700-light);
+    --color-text: var(--gray-1000-light);
+    --color-text-muted: var(--gray-900-light);
+    --color-accent: var(--violet-light);
+    --color-accent-soft: color-mix(in oklab, var(--color-accent) 12%, transparent);
+    --color-focus: var(--color-accent);
+
+    /* component */
+    --radius-sm: 6px;
+    --radius-md: 12px;
+    --radius-full: 999px;
+    --transition-duration: 150ms;
+
+    color-scheme: light dark;
+    accent-color: var(--color-accent);
+
+    @media (prefers-color-scheme: dark) {
+      --color-bg: var(--bg-200-dark);
+      --color-surface: var(--bg-100-dark);
+      --color-surface-hover: var(--gray-100-dark);
+      --color-border: var(--gray-alpha-400-dark);
+      --color-border-hover: var(--gray-500-dark);
+      --color-control-border: var(--gray-650-dark);
+      --color-text: var(--gray-1000-dark);
+      --color-text-muted: var(--gray-900-dark);
+      --color-accent: var(--violet-dark);
+    }
   }
+
   html {
-    font-family: system-ui, sans-serif;
-    background: #13151a;
+    font-family: var(--font-sans);
+    font-size-adjust: from-font;
+    line-height: 1.5;
+    background: var(--color-bg);
+    color: var(--color-text);
+    -webkit-font-smoothing: antialiased;
   }
-  code {
-    font-family:
-      Menlo,
-      Monaco,
-      Lucida Console,
-      Liberation Mono,
-      DejaVu Sans Mono,
-      Bitstream Vera Sans Mono,
-      Courier New,
-      monospace;
+
+  body {
+    margin: 0;
+  }
+
+  ::selection {
+    background: var(--color-accent-soft);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  :where(button, input, label, summary, a) {
+    touch-action: manipulation;
+  }
+
+  .visually-hidden:where(:not(:focus-within, :active)) {
+    position: absolute !important;
+    clip-path: inset(50%) !important;
+    overflow: hidden !important;
+    width: 1px !important;
+    height: 1px !important;
+    margin: -1px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    white-space: nowrap !important;
+  }
+
+  .skip-link {
+    position: fixed;
+    inset-block-start: 1rem;
+    inset-inline-start: 1rem;
+    z-index: 10;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+    background: var(--color-text);
+    color: var(--color-bg);
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
   }
 </style>

@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import TemplateCard from '../components/TemplateCard.astro';
+import FilterPanel from '../components/FilterPanel.astro';
 import { ClientRouter } from 'astro:transitions';
 
 type Template = {
@@ -11,13 +12,18 @@ type Template = {
   documentation: string;
 };
 
+const TEMPLATES_URL =
+  'https://raw.githubusercontent.com/coollabsio/coolify/refs/heads/main/templates/service-templates.json';
+const TEMPLATES_SOURCE_URL =
+  'https://github.com/coollabsio/coolify/blob/main/templates/service-templates.json';
+
 // Fetch the JSON data at build time
 let templates: Record<string, Template> = {};
 let error_msg: string | null = null;
 try {
-  const response = await fetch(
-    'https://raw.githubusercontent.com/coollabsio/coolify/refs/heads/main/templates/service-templates.json'
-  );
+  const response = await fetch(TEMPLATES_URL);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
   templates = await response.json();
 } catch (error) {
   console.error('Error fetching templates:', error);
@@ -27,6 +33,7 @@ try {
 // Fetch the version information
 const versionResponse = await fetch('https://cdn.coollabs.io/coolify/versions.json');
 const versionData = await versionResponse.json();
+const version: string = versionData.coolify.v4.version;
 
 // Fetch the service page slugs from the Coolify docs repo
 const COOLIFY_DOCS_URL = 'https://coolify.io/docs/services/';
@@ -47,6 +54,10 @@ try {
   console.error('Error fetching Coolify docs pages:', error);
 }
 
+// upstream mixes case ("RSS", "Mail") and has one comma-joined value ("database,observability,developer-tools")
+const toCategory = (category?: string) => category?.split(',')[0].trim().toLowerCase() || undefined;
+const toTag = (tag: string) => tag.trim().toLowerCase();
+
 // Group variants like wordpress-with-mysql / wordpress-without-database under their base name
 const toBaseName = (name: string) => name.replace(/-with(out)?-.*$/, '');
 const groups = new Map<string, (Template & { name: string })[]>();
@@ -66,144 +77,611 @@ const templateArray = Array.from(groups, ([baseName, members]) => {
   return {
     ...primary,
     name: members.length > 1 ? baseName : primary.name,
-    categories: [...new Set([primary, ...members].map((member) => member.category))],
-    tags: [...new Set([primary, ...members].flatMap((member) => member.tags ?? []))],
+    categories: [
+      ...new Set(
+        [primary, ...members]
+          .map((member) => toCategory(member.category))
+          .filter((category) => category !== undefined)
+      ),
+    ],
+    tags: [
+      ...new Set(
+        [primary, ...members].flatMap((member) => (member.tags ?? []).map(toTag)).filter(Boolean)
+      ),
+    ],
     variants: members.length > 1 ? members.map((member) => member.name) : [],
     coolifyDocs: docsSlug ? `${COOLIFY_DOCS_URL}${docsSlug}` : undefined,
   };
 }).sort((a, b) => a.name.localeCompare(b.name));
+
+const countBy = (values: string[]) =>
+  [
+    ...values.reduce(
+      (counts, value) => counts.set(value, (counts.get(value) ?? 0) + 1),
+      new Map<string, number>()
+    ),
+  ].sort(([nameA, countA], [nameB, countB]) => countB - countA || nameA.localeCompare(nameB));
+
+const TOP_TAG_COUNT = 20;
+const categoryCounts = countBy(templateArray.flatMap((template) => template.categories));
+const tagCounts = countBy(templateArray.flatMap((template) => template.tags));
+const topTags = tagCounts.slice(0, TOP_TAG_COUNT);
+const moreTags = tagCounts.slice(TOP_TAG_COUNT).sort(([nameA], [nameB]) => nameA.localeCompare(nameB));
+const templateCount = Object.keys(templates).length;
 ---
 
-<Layout title="Coolify Service Templates">
+<Layout title="Coolify service templates (unofficial list)">
   <ClientRouter />
-  <main>
-    <h1>
-      Coolify Service Templates
-      <a
-        class="subtitle"
-        href="https://github.com/coollabsio/coolify/blob/main/templates/service-templates.json"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        unofficial list
-      </a>
-    </h1>
-    <div style="display: flex; justify-content: center; align-items: center">
-      <code class="version-info"
-        >Current Coolify Version: <a
-          class="nobr"
-          href={`https://github.com/coollabsio/coolify/releases/tag/v${versionData.coolify.v4.version}`}
-          target="_blank"
-          rel="noopener noreferrer">v{versionData.coolify.v4.version}</a
-        ></code
-      >
-    </div>
-    <div id="selected-tags" class="selected-tags"></div>
-    <div id="items-counter" class="items-counter">
-      Showing all {templateArray.length} items
-    </div>
-    <div class="templates">
-      {error_msg && <p class="error">{error_msg}</p>}
+  <a class="skip-link visually-hidden" href="#services">Skip to services</a>
+  <div class="page">
+    <header class="page-header">
+      <div class="title-row">
+        <h1>Coolify service templates</h1>
+        <div class="header-links">
+          <a
+            class="badge"
+            href={`https://github.com/coollabsio/coolify/releases/tag/v${version}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Coolify v{version}
+          </a>
+          <a class="badge" href={TEMPLATES_SOURCE_URL} target="_blank" rel="noopener noreferrer">
+            Source JSON
+          </a>
+        </div>
+      </div>
+      <p class="lede">
+        {!error_msg && `${templateArray.length} one-click services (${templateCount} templates including variants) from the `}
+        {error_msg && 'One-click services from the '}
+        <span translate="no">coollabsio/coolify</span> repository. Unofficial list, rebuilt from the
+        main branch.
+      </p>
+      <label class="search" hidden={!!error_msg}>
+        <span class="visually-hidden">Search services</span>
+        <svg
+          aria-hidden="true"
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="11" cy="11" r="7"></circle>
+          <path d="m20 20-3.5-3.5"></path>
+        </svg>
+        <input
+          id="search"
+          type="search"
+          name="q"
+          form="filters"
+          placeholder="Search services…"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </label>
+    </header>
+
+    <div class="layout">
       {
-        !error_msg &&
-          templateArray.map((template) => (
-            <TemplateCard
-              name={template.name}
-              logo={template.logo}
-              slogan={template.slogan}
-              categories={template.categories}
-              tags={template.tags}
-              documentation={template.documentation}
-              coolifyDocs={template.coolifyDocs}
-              variants={template.variants}
+        !error_msg && (
+          <aside class="sidebar">
+            <FilterPanel
+              total={templateArray.length}
+              categories={categoryCounts}
+              topTags={topTags}
+              moreTags={moreTags}
             />
-          ))
+          </aside>
+        )
       }
+
+      <main id="services" tabindex="-1">
+        <h2 class="visually-hidden">Services</h2>
+        {
+          error_msg ? (
+            <div class="notice" role="alert">
+              <p>
+                <strong>Couldn't load the template list from GitHub</strong> ({error_msg}).
+              </p>
+              <p>
+                Reload the page, or check that <a href={TEMPLATES_SOURCE_URL}>service-templates.json</a>{' '}
+                still exists in <span translate="no">coollabsio/coolify</span>.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div class="toolbar">
+                <p class="count" aria-live="polite" data-result-count="true">
+                  Showing all {templateArray.length} services
+                </p>
+                <ul class="active-filters" role="list" data-active-filters="true" />
+                <template data-active-filter-template="true">
+                  <li>
+                    <button type="button" class="active-filter">
+                      <span data-label="true" />
+                      <span aria-hidden="true">×</span>
+                    </button>
+                  </li>
+                </template>
+                <button type="reset" form="filters" class="clear" data-clear="true" hidden>
+                  Clear filters
+                </button>
+              </div>
+              <ul class="grid" role="list" data-grid="true">
+                {templateArray.map((template, index) => (
+                  <TemplateCard
+                    name={template.name}
+                    logo={template.logo}
+                    slogan={template.slogan}
+                    categories={template.categories}
+                    tags={template.tags}
+                    documentation={template.documentation}
+                    coolifyDocs={template.coolifyDocs}
+                    variants={template.variants}
+                    index={index}
+                  />
+                ))}
+              </ul>
+              <div class="notice" data-empty-state="true" hidden>
+                <p>No services match these filters.</p>
+                <button type="reset" form="filters" class="clear">
+                  Clear filters
+                </button>
+              </div>
+            </>
+          )
+        }
+      </main>
     </div>
-  </main>
+  </div>
 </Layout>
 
-<style>
-  main {
-    margin: auto;
-    padding: 1rem;
-    width: 1000px;
-    max-width: calc(100% - 2rem);
-    color: white;
-    font-size: 16px;
-    line-height: 1.6;
+<script>
+  type Card = {
+    element: HTMLElement;
+    categories: string[];
+    tags: string[];
+    text: string;
+  };
+
+  type FilterState = {
+    query: string;
+    category: string;
+    tags: string[];
+  };
+
+  const SEARCH_DEBOUNCE_MS = 150;
+  const NARROW_LAYOUT_QUERY = '(width < 64rem)';
+
+  /** wires the filter form, card chips and URL state; runs on every astro:page-load (ClientRouter) */
+  function initFilters() {
+    const form = document.querySelector<HTMLFormElement>('#filters');
+    const grid = document.querySelector<HTMLElement>('[data-grid="true"]');
+    const search = document.querySelector<HTMLInputElement>('#search');
+    const resultCount = document.querySelector<HTMLElement>('[data-result-count="true"]');
+    const activeFilters = document.querySelector<HTMLElement>('[data-active-filters="true"]');
+    const clearButton = document.querySelector<HTMLButtonElement>('[data-clear="true"]');
+    const emptyState = document.querySelector<HTMLElement>('[data-empty-state="true"]');
+    const panel = document.querySelector<HTMLDetailsElement>('[data-filter-panel="true"]');
+    const activeCount = document.querySelector<HTMLElement>('[data-active-count="true"]');
+    const activeFilterTemplate = document.querySelector<HTMLTemplateElement>(
+      '[data-active-filter-template="true"]'
+    );
+    if (
+      !form ||
+      !grid ||
+      !search ||
+      !resultCount ||
+      !activeFilters ||
+      !activeFilterTemplate ||
+      !clearButton ||
+      !emptyState
+    ) {
+      return;
+    }
+
+    const numberFormat = new Intl.NumberFormat('en');
+    const cards: Card[] = [...grid.querySelectorAll<HTMLElement>('[data-card="true"]')].map(
+      (element) => {
+        const categories: string[] = JSON.parse(element.dataset.categories ?? '[]');
+        const tags: string[] = JSON.parse(element.dataset.tags ?? '[]');
+        return { element, categories, tags, text: element.dataset.search ?? '' };
+      }
+    );
+
+    const getState = (): FilterState => {
+      const data = new FormData(form);
+      return {
+        query: String(data.get('q') ?? '')
+          .trim()
+          .toLowerCase(),
+        category: String(data.get('category') ?? ''),
+        tags: data.getAll('tag').map(String),
+      };
+    };
+
+    const getTagInput = (tag: string) =>
+      form.querySelector<HTMLInputElement>(`input[name="tag"][value="${CSS.escape(tag)}"]`);
+    const getCategoryInput = (category: string) =>
+      form.querySelector<HTMLInputElement>(`input[name="category"][value="${CSS.escape(category)}"]`);
+
+    // cloned from an astro-rendered <template> so the chips carry the scoped style attributes
+    const createRemoveButton = (kind: string, value: string) => {
+      const fragment = activeFilterTemplate.content.cloneNode(true) as DocumentFragment;
+      const button = fragment.querySelector<HTMLButtonElement>('button');
+      const label = fragment.querySelector<HTMLElement>('[data-label="true"]');
+      if (button) {
+        button.dataset.removeKind = kind;
+        button.dataset.removeValue = value;
+        button.setAttribute('aria-label', `Remove ${kind} filter ${value}`);
+      }
+      if (label) label.textContent = value;
+
+      return fragment;
+    };
+
+    const updateUrl = ({ query, category, tags }: FilterState) => {
+      const params = new URLSearchParams();
+      if (query) params.set('q', query);
+      if (category) params.set('category', category);
+      tags.forEach((tag) => params.append('tag', tag));
+
+      const search = params.toString();
+      history.replaceState(history.state, '', `${location.pathname}${search ? `?${search}` : ''}`);
+    };
+
+    const applyFilters = () => {
+      const state = getState();
+      const { query, category, tags } = state;
+      let visibleCount = 0;
+
+      for (const card of cards) {
+        const isMatch =
+          (!category || card.categories.includes(category)) &&
+          tags.every((tag) => card.tags.includes(tag)) &&
+          (!query || card.text.includes(query));
+        card.element.hidden = !isMatch;
+        if (isMatch) visibleCount++;
+      }
+
+      const total = numberFormat.format(cards.length);
+      resultCount.textContent =
+        visibleCount === cards.length
+          ? `Showing all ${total} services`
+          : `Showing ${numberFormat.format(visibleCount)} of ${total} services`;
+      emptyState.hidden = visibleCount > 0;
+
+      grid.querySelectorAll<HTMLButtonElement>('button[data-tag]').forEach((button) => {
+        button.setAttribute('aria-pressed', String(tags.includes(button.dataset.tag ?? '')));
+      });
+      grid.querySelectorAll<HTMLButtonElement>('button[data-category]').forEach((button) => {
+        button.setAttribute('aria-pressed', String(button.dataset.category === category));
+      });
+
+      const removeButtons = [
+        ...(category ? [createRemoveButton('category', category)] : []),
+        ...tags.map((tag) => createRemoveButton('tag', tag)),
+      ];
+      activeFilters.replaceChildren(...removeButtons);
+      const activeTotal = removeButtons.length + (query ? 1 : 0);
+      clearButton.hidden = activeTotal === 0;
+      if (activeCount) activeCount.textContent = activeTotal > 0 ? String(activeTotal) : '';
+
+      updateUrl(state);
+    };
+
+    const restoreFromUrl = () => {
+      const params = new URLSearchParams(location.search);
+      search.value = params.get('q') ?? '';
+      const categoryInput = getCategoryInput(params.get('category') ?? '');
+      if (categoryInput) categoryInput.checked = true;
+
+      params.getAll('tag').forEach((tag) => {
+        const tagInput = getTagInput(tag);
+        if (!tagInput) return;
+
+        tagInput.checked = true;
+        tagInput.closest('details.more-tags')?.setAttribute('open', '');
+      });
+    };
+
+    let searchTimer: number | undefined;
+    search.addEventListener('input', () => {
+      window.clearTimeout(searchTimer);
+      searchTimer = window.setTimeout(applyFilters, SEARCH_DEBOUNCE_MS);
+    });
+    form.addEventListener('change', applyFilters);
+    // reset fires before the controls are cleared, so wait a task
+    form.addEventListener('reset', () => window.setTimeout(applyFilters));
+
+    grid.addEventListener('click', (event) => {
+      const button = (event.target as Element).closest<HTMLButtonElement>('button');
+      const { tag, category } = button?.dataset ?? {};
+
+      if (tag) {
+        const tagInput = getTagInput(tag);
+        if (tagInput) tagInput.checked = !tagInput.checked;
+      } else if (category !== undefined) {
+        const input = getCategoryInput(category);
+        const isActive = input?.checked;
+        const target = isActive ? getCategoryInput('') : input;
+        if (target) target.checked = true;
+      } else {
+        return;
+      }
+
+      applyFilters();
+    });
+
+    activeFilters.addEventListener('click', (event) => {
+      const button = (event.target as Element).closest<HTMLButtonElement>('button');
+      const { removeKind, removeValue } = button?.dataset ?? {};
+      if (removeKind === 'category') {
+        const allInput = getCategoryInput('');
+        if (allInput) allInput.checked = true;
+      }
+      if (removeKind === 'tag' && removeValue) {
+        const tagInput = getTagInput(removeValue);
+        if (tagInput) tagInput.checked = false;
+      }
+      if (!removeKind) return;
+
+      applyFilters();
+      search.focus();
+    });
+
+    if (panel && window.matchMedia(NARROW_LAYOUT_QUERY).matches) panel.open = false;
+
+    restoreFromUrl();
+    applyFilters();
   }
-  h1 {
-    font-size: 2.5rem;
-    font-weight: 700;
-    text-align: center;
-    margin-bottom: 1em;
-    color: rgb(var(--accent-light));
+
+  document.addEventListener('astro:page-load', initFilters);
+</script>
+
+<style>
+  .page {
+    max-inline-size: 80rem;
+    margin-inline: auto;
+    padding: 4rem 1.5rem;
+
+    @media (width < 40rem) {
+      padding: 2rem 1rem;
+    }
+  }
+
+  .page-header {
+    display: grid;
+    gap: 1rem;
+    margin-block-end: 2.5rem;
+  }
+
+  .title-row {
     display: flex;
-    flex-direction: column;
-    align-items: center;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem 1.5rem;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(2rem, 1.5rem + 2vw, 3rem);
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.04em;
+    text-wrap: balance;
+  }
+
+  .header-links {
+    display: flex;
+    flex-wrap: wrap;
     gap: 0.5rem;
   }
-  .subtitle {
-    font-size: 1rem;
-    font-weight: normal;
-    color: rgba(var(--accent-light), 0.7);
-    font-style: italic;
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 1.75rem;
+    padding-inline: 0.625rem;
+    border: 1px solid var(--color-border-hover);
+    border-radius: var(--radius-full);
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-decoration: none;
+    transition-property: color, border-color;
+    transition-duration: var(--transition-duration);
 
     &:hover {
-      color: rgb(var(--accent-light));
-    }
-
-    &:focus-visible {
-      outline: 2px solid rgb(var(--accent-light));
-      outline-offset: 2px;
-      border-radius: 2px;
+      border-color: var(--color-control-border);
+      color: var(--color-text);
     }
   }
-  .version-info {
-    text-align: center;
-    padding: 0.5rem;
-    background: rgba(var(--accent), 0.1);
-    border-radius: 4px;
 
-    & a {
-      color: rgb(var(--accent-light));
+  .lede {
+    max-inline-size: 60ch;
+    margin: 0;
+    color: var(--color-text-muted);
+    text-wrap: pretty;
+  }
 
-      &:focus-visible {
-        outline: 2px solid rgb(var(--accent-light));
-        outline-offset: 2px;
-        border-radius: 2px;
+  .search {
+    position: relative;
+    display: block;
+
+    &[hidden] {
+      display: none;
+    }
+
+    & svg {
+      position: absolute;
+      inset-block-start: 50%;
+      inset-inline-start: 0.75rem;
+      translate: 0 -50%;
+      color: var(--color-text-muted);
+      pointer-events: none;
+    }
+
+    & input {
+      box-sizing: border-box;
+      inline-size: 100%;
+      min-block-size: 2.5rem;
+      padding: 0.5rem 0.75rem 0.5rem 2.25rem;
+      border: 1px solid var(--color-control-border);
+      border-radius: var(--radius-sm);
+      background: var(--color-surface);
+      color: var(--color-text);
+      font: inherit;
+      font-size: 0.875rem;
+
+      &::placeholder {
+        color: var(--color-text-muted);
       }
     }
   }
-  .selected-tags {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-    flex-wrap: wrap;
-    margin-bottom: 1rem;
-    min-height: 2rem;
-    border-radius: 4px;
-    font-family: monospace;
-  }
-  .items-counter {
-    text-align: right;
-    color: #ccc;
-    font-size: 0.9rem;
-    margin-bottom: 1rem;
-    font-family: monospace;
-  }
-  .filter-label {
-    color: #ccc;
-    font-size: 0.9rem;
-  }
-  .templates {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+
+  .layout {
+    display: grid;
+    grid-template-columns: 15rem minmax(0, 1fr);
+    align-items: start;
+    gap: 2.5rem;
+
+    @media (width < 64rem) {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 1.5rem;
+    }
+
+    /* error state renders no sidebar */
+    &:not(:has(.sidebar)) {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 
-  .nobr {
-    white-space: nowrap;
+  .sidebar {
+    position: sticky;
+    inset-block-start: 1.5rem;
+    max-block-size: calc(100dvh - 3rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+
+    @media (width < 64rem) {
+      position: static;
+      max-block-size: none;
+      overflow: visible;
+    }
+  }
+
+  main {
+    min-inline-size: 0;
+
+    &:focus {
+      outline: none;
+    }
+  }
+
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+    min-block-size: 2rem;
+    margin-block-end: 1rem;
+  }
+
+  .count {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .active-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    & .active-filter {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      min-block-size: 1.5rem;
+      padding: 0.125rem 0.5rem;
+      border: 1px solid var(--color-accent);
+      border-radius: var(--radius-full);
+      background: var(--color-accent-soft);
+      color: var(--color-accent);
+      font: inherit;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      cursor: pointer;
+
+      @media (forced-colors: active) {
+        border-color: Highlight;
+      }
+    }
+  }
+
+  .clear {
+    min-block-size: 2rem;
+    margin-inline-start: auto;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-text);
+    font: inherit;
+    font-size: 0.875rem;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+
+    &[hidden] {
+      display: none;
+    }
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .notice {
+    display: grid;
+    justify-items: center;
+    gap: 0.5rem;
+    padding: 3rem 1.5rem;
+    border: 1px dashed var(--color-border-hover);
+    border-radius: var(--radius-md);
+    color: var(--color-text-muted);
+    text-align: center;
+
+    &[hidden] {
+      display: none;
+    }
+
+    & p {
+      margin: 0;
+    }
+
+    & a {
+      color: var(--color-text);
+    }
+
+    & .clear {
+      margin-inline-start: 0;
+    }
   }
 </style>

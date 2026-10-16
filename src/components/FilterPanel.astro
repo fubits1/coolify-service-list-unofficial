@@ -1,0 +1,220 @@
+---
+type Count = [name: string, count: number];
+
+type Props = {
+  total: number;
+  categories: Count[];
+  topTags: Count[];
+  moreTags: Count[];
+};
+
+const { total, categories, topTags, moreTags } = Astro.props;
+---
+
+<details class="panel" open data-filter-panel="true">
+  <summary>
+    Filters <span class="active-count" data-active-count="true"></span>
+    <svg
+      class="chevron"
+      aria-hidden="true"
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="m6 9 6 6 6-6"></path>
+    </svg>
+  </summary>
+  <form id="filters" aria-label="Filter services">
+    <h2 class="panel-title">Filters</h2>
+    <fieldset>
+      <legend>Category</legend>
+      <label class="option">
+        <input type="radio" name="category" value="" checked />
+        <span class="option-label">All</span>
+        <span class="option-count">{total}</span>
+      </label>
+      {
+        categories.map(([category, count]) => (
+          <label class="option">
+            <input type="radio" name="category" value={category} />
+            <span class="option-label">{category}</span>
+            <span class="option-count">{count}</span>
+          </label>
+        ))
+      }
+    </fieldset>
+    <fieldset>
+      <legend>Popular tags</legend>
+      {
+        topTags.map(([tag, count]) => (
+          <label class="option">
+            <input type="checkbox" name="tag" value={tag} />
+            <span class="option-label">{tag}</span>
+            <span class="option-count">{count}</span>
+          </label>
+        ))
+      }
+    </fieldset>
+    {
+      moreTags.length > 0 && (
+        <details class="more-tags">
+          <summary>More tags ({moreTags.length})</summary>
+          <fieldset>
+            <legend class="visually-hidden">More tags</legend>
+            {moreTags.map(([tag, count]) => (
+              <label class="option">
+                <input type="checkbox" name="tag" value={tag} />
+                <span class="option-label">{tag}</span>
+                <span class="option-count">{count}</span>
+              </label>
+            ))}
+          </fieldset>
+        </details>
+      )
+    }
+  </form>
+</details>
+
+<style>
+  .chevron {
+    margin-inline-start: auto;
+    color: var(--color-text-muted);
+  }
+
+  .panel {
+    & > summary {
+      display: none;
+
+      @media (width < 64rem) {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        min-block-size: 2.5rem;
+        padding-inline: 0.75rem;
+        border: 1px solid var(--color-border-hover);
+        border-radius: var(--radius-sm);
+        background: var(--color-surface);
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+      }
+    }
+
+    &[open] > summary .chevron {
+      rotate: 180deg;
+    }
+  }
+
+  .active-count {
+    color: var(--color-accent);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+  }
+
+  form {
+    display: grid;
+    gap: 1.5rem;
+
+    @media (width < 64rem) {
+      padding-block-start: 1rem;
+    }
+  }
+
+  .panel-title {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+
+    @media (width < 64rem) {
+      display: none;
+    }
+  }
+
+  fieldset {
+    display: grid;
+    gap: 0.125rem;
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  legend {
+    margin-block-end: 0.375rem;
+    padding: 0;
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
+  }
+
+  .option {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.5rem;
+    min-block-size: 2rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition-property: color, background-color;
+    transition-duration: var(--transition-duration);
+
+    &:hover {
+      background: var(--color-surface-hover);
+      color: var(--color-text);
+    }
+
+    &:has(:checked) {
+      background: var(--color-accent-soft);
+      color: var(--color-text);
+      font-weight: 500;
+    }
+
+    & input {
+      inline-size: 1rem;
+      block-size: 1rem;
+      margin: 0;
+    }
+
+    @media (pointer: coarse) {
+      min-block-size: 2.75rem;
+    }
+  }
+
+  .option-label {
+    overflow-wrap: anywhere;
+  }
+
+  .option-count {
+    color: var(--color-text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .more-tags {
+    & > summary {
+      padding: 0.25rem 0.5rem;
+      border-radius: var(--radius-sm);
+      color: var(--color-text-muted);
+      font-size: 0.8125rem;
+      cursor: pointer;
+
+      &:hover {
+        color: var(--color-text);
+      }
+    }
+
+    & fieldset {
+      margin-block-start: 0.5rem;
+    }
+  }
+</style>

@@ -1,40 +1,40 @@
 ---
-
+const builtAt = new Date();
+const builtAtLabel = new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(builtAt);
 ---
 
 <footer>
-  <div class="inner">
-    <code>Last Update: {new Date().toISOString().split('T')[0]}</code> | <a
-      href="https://github.com/fubits1/coolify-service-list-unofficial"
-    >
-      fubits1/coolify-service-list-unofficial
-    </a>
-  </div>
+  <p>Updated <time datetime={builtAt.toISOString()}>{builtAtLabel}</time></p>
+  <a href="https://github.com/fubits1/coolify-service-list-unofficial" translate="no">
+    fubits1/coolify-service-list-unofficial
+  </a>
 </footer>
 
 <style>
   footer {
-    /* position: sticky; */
-    /* bottom: 0.5rem; */
     display: flex;
-    justify-content: center;
-    align-items: baseline;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.5rem 1.5rem;
+    max-inline-size: 80rem;
+    margin-inline: auto;
+    padding: 1.5rem;
+    border-block-start: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
 
-    & .inner {
-      display: flex;
-      justify-content: center;
-      align-items: baseline;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      padding: 0.5rem 1rem;
-      background-color: rgba(var(--accent-dark), 66%);
-      border-radius: 8px;
+    & p {
+      margin: 0;
+    }
 
-      color: #ececec;
-      font-size: 14px;
+    & a {
+      color: inherit;
+      text-underline-offset: 3px;
+      transition-property: color;
+      transition-duration: var(--transition-duration);
 
-      & a {
-        color: #ececec;
+      &:hover {
+        color: var(--color-text);
       }
     }
   }
