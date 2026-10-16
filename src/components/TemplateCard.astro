@@ -4,311 +4,322 @@ type Props = {
   logo?: string;
   slogan: string;
   categories: string[];
-  tags?: string[];
+  tags: string[];
   documentation?: string;
   coolifyDocs?: string;
   variants?: string[];
+  /** position in the list; the first rows load eagerly, the rest defer rendering */
+  index: number;
 };
 
-const { name, logo, slogan, categories, tags, documentation, coolifyDocs, variants } = Astro.props;
+const {
+  name,
+  logo,
+  slogan,
+  categories,
+  tags,
+  documentation,
+  coolifyDocs,
+  variants = [],
+  index,
+} = Astro.props;
 const ASSET_URL = 'https://raw.githubusercontent.com/coollabsio/coolify/refs/heads/main/public/';
+const EAGER_CARD_COUNT = 12;
+const isDeferred = index >= EAGER_CARD_COUNT;
 const links = [
-  documentation && { href: documentation, label: 'Project docs', title: 'View project documentation' },
-  coolifyDocs && { href: coolifyDocs, label: 'Coolify docs', title: 'View Coolify documentation' },
+  coolifyDocs && { href: coolifyDocs, label: 'Coolify docs' },
+  documentation && { href: documentation, label: 'Project docs' },
 ].filter((link) => !!link);
+const searchText = [name, slogan, ...tags, ...variants].join(' ').toLowerCase();
 ---
 
-<div class="template-row">
-  <div class="logo-column">
-    {logo && <img src={`${ASSET_URL}${logo}`} alt={`${name} logo`} class="template-logo" />}
+<li
+  class="card"
+  data-card="true"
+  data-categories={JSON.stringify(categories)}
+  data-tags={JSON.stringify(tags)}
+  data-search={searchText}
+  data-deferred={String(isDeferred)}
+>
+  <div class="card-header">
     {
-      links.length > 0 && (
-        <ul class="docs-links">
-          {links.map((link) => (
+      logo ? (
+        <img
+          class="logo"
+          src={`${ASSET_URL}${logo}`}
+          alt=""
+          width="32"
+          height="32"
+          loading={isDeferred ? 'lazy' : 'eager'}
+          decoding="async"
+        />
+      ) : (
+        <span class="logo" aria-hidden="true" />
+      )
+    }
+    <h3 class="name" translate="no">{name}</h3>
+    {
+      categories.length > 0 && (
+        <ul class="categories" role="list">
+          {categories.map((category) => (
             <li>
-              <a
-                href={link.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="docs-link"
-                title={link.title}
-              >
-                {link.label}
-                <svg
-                  aria-hidden="true"
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                  <polyline points="15 3 21 3 21 9" />
-                  <line x1="10" y1="14" x2="21" y2="3" />
-                </svg>
-              </a>
+              <button type="button" class="category" data-category={category} aria-pressed="false">
+                <span class="visually-hidden">Filter by category </span>
+                {category}
+              </button>
             </li>
           ))}
         </ul>
       )
     }
   </div>
-  <div class="content-column">
-    <div class="header">
-      <h2>{name}</h2>
-      <div class="categories">
-        {
-          categories.map((category) => (
-            <button class="tag category" data-tag={category} title="Category">
-              {category}
-            </button>
-          ))
-        }
+  {
+    variants.length > 0 && (
+      <div class="variants">
+        <span>{variants.length} variants</span>
+        <ul role="list">
+          {variants.map((variant) => (
+            <li title={variant} translate="no">
+              {variant === name ? 'default' : variant.slice(name.length + 1).replaceAll('-', ' ')}
+            </li>
+          ))}
+        </ul>
       </div>
-    </div>
-    {
-      variants && variants.length > 0 && (
-        <div class="variants">
-          <span class="variants-label">{variants.length} variants</span>
-          <ul>
-            {variants.map((variant) => (
-              <li title={variant} translate="no">
-                {variant === name ? 'default' : variant.slice(name.length + 1).replaceAll('-', ' ')}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )
-    }
-    <p class="slogan">{slogan}</p>
-    <div class="meta">
-      {
-        tags && (
-          <div class="tags">
-            {tags.map((tag) => (
-              <button class="tag" data-tag={tag}>
-                {tag}
-              </button>
-            ))}
-          </div>
-        )
-      }
-    </div>
-  </div>
-</div>
-
-<script>
-  let selectedTags = new Set<string>();
-  const selectedTagsContainer = document.getElementById('selected-tags');
-  const templateRows = document.querySelectorAll<HTMLElement>('.template-row');
-
-  function updateSelectedTags() {
-    if (selectedTagsContainer) {
-      selectedTagsContainer.innerHTML =
-        selectedTags.size > 0
-          ? `<span class="filter-label">Filtered by:</span> ${Array.from(selectedTags)
-              .map((tag) => `<button class="tag selected" data-tag="${tag}">${tag}</button>`)
-              .join('')}`
-          : '';
-    }
-
-    // Update visibility of template rows
-    templateRows.forEach((row) => {
-      if (selectedTags.size === 0) {
-        row.style.display = 'grid';
-        return;
-      }
-
-      const rowTags = Array.from(row.querySelectorAll<HTMLElement>('.tag')).map((tag) => tag.dataset.tag);
-      const hasAllSelectedTags = Array.from(selectedTags).every((tag) => rowTags.includes(tag));
-      row.style.display = hasAllSelectedTags ? 'grid' : 'none';
-    });
-
-    // Update counter
-    const visibleItems = Array.from(templateRows).filter(
-      (row) => row.style.display !== 'none'
-    ).length;
-    const totalItems = templateRows.length;
-    const counterElement = document.getElementById('items-counter');
-    if (counterElement) {
-      counterElement.textContent = `Showing ${visibleItems} of ${totalItems} items`;
-    }
-
-    // Update all tag buttons to show selected state
-    document.querySelectorAll<HTMLElement>('.tag').forEach((tagBtn) => {
-      tagBtn.classList.toggle('selected', selectedTags.has(tagBtn.dataset.tag ?? ''));
-    });
+    )
   }
-
-  function handleTagClick(e: MouseEvent) {
-    const tagBtn = (e.target as Element).closest<HTMLElement>('.tag');
-    if (!tagBtn || !tagBtn.dataset.tag) return;
-
-    const tag = tagBtn.dataset.tag;
-    if (selectedTags.has(tag)) {
-      selectedTags.delete(tag);
-    } else {
-      selectedTags.add(tag);
-    }
-
-    updateSelectedTags();
+  <p class="slogan">{slogan}</p>
+  {
+    tags.length > 0 && (
+      <ul class="tags" role="list">
+        {tags.map((tag) => (
+          <li>
+            <button type="button" class="tag" data-tag={tag} aria-pressed="false">
+              <span class="visually-hidden">Filter by tag </span>
+              {tag}
+            </button>
+          </li>
+        ))}
+      </ul>
+    )
   }
-
-  // Add click handlers
-  document.addEventListener('click', handleTagClick);
-</script>
+  {
+    links.length > 0 && (
+      <ul class="links" role="list">
+        {links.map((link) => (
+          <li>
+            <a href={link.href} target="_blank" rel="noopener noreferrer">
+              {link.label}
+              <span class="visually-hidden"> for {name}, opens in a new tab</span>
+              <svg
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M7 17 17 7" />
+                <path d="M7 7h10v10" />
+              </svg>
+            </a>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</li>
 
 <style>
-  .template-row {
-    display: grid;
-    grid-template-columns: 100px 1fr;
-    gap: 1.5rem;
-    padding: 1.5rem;
-    border: 1px solid rgba(var(--accent-light), 25%);
-    background: linear-gradient(rgba(var(--accent-dark), 66%), rgba(var(--accent-dark), 33%));
-    border-radius: 8px;
-    transition: transform 0.2s ease-in-out;
-
-    @media (max-width: 500px) {
-      grid-template-columns: 1fr;
-    }
-  }
-  .logo-column {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-  }
-  .template-logo {
-    width: 100px;
-    height: 100px;
-    object-fit: contain;
-  }
-  .template-row:hover {
-    transform: translateX(5px);
-  }
-  .template-row h2 {
-    margin: 0;
-    font-size: 1.5rem;
-    color: rgb(var(--accent-light));
-  }
-  .docs-links {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.25rem;
+  ul {
     margin: 0;
     padding: 0;
     list-style: none;
   }
-  .docs-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    font-size: 0.85rem;
-    white-space: nowrap;
-    color: rgb(var(--accent-light));
-    text-decoration: none;
-    opacity: 0.7;
-    transition: opacity 0.2s ease;
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1.25rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    transition-property: border-color;
+    transition-duration: var(--transition-duration);
 
     &:hover {
-      opacity: 1;
-      text-decoration: underline;
+      border-color: var(--color-border-hover);
     }
 
-    &:focus-visible {
-      opacity: 1;
-      outline: 2px solid rgb(var(--accent-light));
-      outline-offset: 2px;
-      border-radius: 2px;
+    /* author display: flex would otherwise override the UA [hidden] rule */
+    &[hidden] {
+      display: none;
+    }
+
+    &[data-deferred='true'] {
+      content-visibility: auto;
+      contain-intrinsic-size: auto none auto 14rem;
     }
   }
+
+  .card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .logo {
+    flex: none;
+    inline-size: 2rem;
+    block-size: 2rem;
+    border-radius: var(--radius-sm);
+    object-fit: contain;
+
+    &:is(span) {
+      background: var(--color-surface-hover);
+    }
+  }
+
+  .name {
+    flex: 1;
+    min-inline-size: 0;
+    margin: 0;
+    /* 1.375rem line + 0.3125rem padding centers the first line on the 2rem logo; wrapped lines stay tight */
+    padding-block: 0.3125rem;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.375rem;
+    letter-spacing: -0.01em;
+    overflow-wrap: anywhere;
+  }
+
   .categories {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     justify-content: flex-end;
-    gap: 0.5rem;
+    gap: 0.25rem;
+    max-inline-size: 50%;
+    /* matches the name's 2rem line box so the label centers on the first title line */
+    min-block-size: 2rem;
+
+    & li {
+      display: flex;
+    }
   }
+
+  .category,
+  .tag {
+    min-block-size: 1.5rem;
+    border: 1px solid var(--color-border);
+    background: transparent;
+    color: var(--color-text-muted);
+    font: inherit;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    cursor: pointer;
+    transition-property: color, border-color, background-color;
+    transition-duration: var(--transition-duration);
+
+    &:hover {
+      border-color: var(--color-control-border);
+      color: var(--color-text);
+    }
+
+    &[aria-pressed='true'] {
+      border-color: var(--color-accent);
+      background: var(--color-accent-soft);
+      color: var(--color-accent);
+
+      @media (forced-colors: active) {
+        border-color: Highlight;
+      }
+    }
+
+    @media (pointer: coarse) {
+      min-block-size: 2.75rem;
+    }
+  }
+
+  .category {
+    padding: 0.125rem 0.5rem;
+    border-color: var(--color-border-hover);
+    border-radius: var(--radius-full);
+    font-family: var(--font-mono);
+  }
+
+  .tag {
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+  }
+
   .variants {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem;
-    margin: 0.5rem 0;
-    font-size: 0.85rem;
+    gap: 0.375rem;
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
 
     & ul {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.5rem;
-      margin: 0;
-      padding: 0;
-      list-style: none;
+      gap: 0.25rem;
     }
 
     & li {
-      padding: 0.1rem 0.5rem;
-      border: 1px solid rgba(var(--accent-light), 30%);
-      border-radius: 4px;
-      color: rgb(var(--accent-light));
+      padding: 0.125rem 0.375rem;
+      border-radius: var(--radius-sm);
+      background: var(--color-surface-hover);
+      font-size: 0.75rem;
     }
   }
-  .variants-label {
-    color: #ccc;
+
+  .slogan {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+    line-height: 1.43;
+    text-wrap: pretty;
+    overflow-wrap: anywhere;
   }
-  .description {
-    margin: 0.5rem 0;
-    color: #ccc;
-  }
-  .meta {
-    display: flex;
-    gap: 1rem;
-    margin-top: 0.5rem;
-    flex-wrap: wrap;
-  }
+
   .tags {
     display: flex;
-    gap: 0.5rem;
     flex-wrap: wrap;
+    gap: 0.375rem;
   }
-  .tag {
-    background: rgba(var(--accent), 0.2);
-    padding: 0.2rem 0.6rem;
-    border: none;
-    cursor: pointer;
-    border-radius: 4px;
-    font-size: 0.9rem;
-    color: rgb(var(--accent-light));
-    transition: background-color 0.2s ease;
-  }
-  .tag:hover {
-    background: rgba(var(--accent), 0.4);
-  }
-  .tag.selected {
-    background: rgba(var(--accent), 0.6);
-  }
-  .header {
+
+  .links {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-  .tag.category {
-    flex-shrink: 0;
-    background: rgb(var(--accent));
-    color: white;
-    font-weight: 600;
-  }
-  .tag.category:hover {
-    background: rgba(var(--accent), 0.8);
-  }
-  .tag.category.selected {
-    outline: 2px solid rgb(var(--accent-light));
-    outline-offset: 2px;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin-block-start: auto;
+    padding-block-start: 0.75rem;
+    border-block-start: 1px solid var(--color-border);
+
+    & a {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      min-block-size: 1.5rem;
+      color: var(--color-text);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      text-decoration: none;
+      text-underline-offset: 3px;
+
+      &:hover {
+        text-decoration: underline;
+      }
+
+      & svg {
+        color: var(--color-text-muted);
+      }
+    }
   }
 </style>
