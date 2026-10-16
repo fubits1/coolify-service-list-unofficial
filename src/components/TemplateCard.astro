@@ -68,9 +68,9 @@ const ASSET_URL = 'https://raw.githubusercontent.com/coollabsio/coolify/refs/hea
 </div>
 
 <script>
-  let selectedTags = new Set();
+  let selectedTags = new Set<string>();
   const selectedTagsContainer = document.getElementById('selected-tags');
-  const templateRows = document.querySelectorAll('.template-row');
+  const templateRows = document.querySelectorAll<HTMLElement>('.template-row');
 
   function updateSelectedTags() {
     if (selectedTagsContainer) {
@@ -89,7 +89,7 @@ const ASSET_URL = 'https://raw.githubusercontent.com/coollabsio/coolify/refs/hea
         return;
       }
 
-      const rowTags = Array.from(row.querySelectorAll('.tag')).map((tag) => tag.dataset.tag);
+      const rowTags = Array.from(row.querySelectorAll<HTMLElement>('.tag')).map((tag) => tag.dataset.tag);
       const hasAllSelectedTags = Array.from(selectedTags).every((tag) => rowTags.includes(tag));
       row.style.display = hasAllSelectedTags ? 'grid' : 'none';
     });
@@ -105,13 +105,13 @@ const ASSET_URL = 'https://raw.githubusercontent.com/coollabsio/coolify/refs/hea
     }
 
     // Update all tag buttons to show selected state
-    document.querySelectorAll('.tag').forEach((tagBtn) => {
-      tagBtn.classList.toggle('selected', selectedTags.has(tagBtn.dataset.tag));
+    document.querySelectorAll<HTMLElement>('.tag').forEach((tagBtn) => {
+      tagBtn.classList.toggle('selected', selectedTags.has(tagBtn.dataset.tag ?? ''));
     });
   }
 
-  function handleTagClick(e) {
-    const tagBtn = e.target.closest('.tag');
+  function handleTagClick(e: MouseEvent) {
+    const tagBtn = (e.target as Element).closest<HTMLElement>('.tag');
     if (!tagBtn || !tagBtn.dataset.tag) return;
 
     const tag = tagBtn.dataset.tag;
