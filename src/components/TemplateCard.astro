@@ -3,13 +3,13 @@ interface Props {
   name: string;
   logo?: string;
   slogan: string;
-  type: string;
+  category: string;
   tags?: string[];
   documentation?: string;
 }
 
-const { name, logo, slogan, type, tags, documentation } = Astro.props;
-const ASSET_URL = 'https://raw.githubusercontent.com/coollabsio/coolify/refs/heads/v4.x/public/';
+const { name, logo, slogan, category, tags, documentation } = Astro.props;
+const ASSET_URL = 'https://raw.githubusercontent.com/coollabsio/coolify/refs/heads/main/public/';
 ---
 
 <div class="template-row">
@@ -49,7 +49,7 @@ const ASSET_URL = 'https://raw.githubusercontent.com/coollabsio/coolify/refs/hea
     </h2>
     <p class="slogan">{slogan}</p>
     <div class="meta">
-      <span class="type-label">Type: <span class="type-value">{type}</span></span>
+      <span class="type-label">Category: <span class="type-value">{category}</span></span>
       {
         tags && (
           <div class="tags">
