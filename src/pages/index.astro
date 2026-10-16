@@ -1,13 +1,12 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import TemplateCard from '../components/TemplateCard.astro';
-import { ViewTransitions } from 'astro:transitions';
+import { ClientRouter } from 'astro:transitions';
 
 // Fetch the JSON data at build time
 let templates: Record<
   string,
   {
-    name: string;
     logo: string;
     slogan: string;
     category: string;
@@ -23,7 +22,7 @@ try {
   templates = await response.json();
 } catch (error) {
   console.error('Error fetching templates:', error);
-  error_msg = error;
+  error_msg = error instanceof Error ? error.message : String(error);
 }
 
 // Fetch the version information
@@ -42,7 +41,7 @@ const templateArray = Object.entries(templates)
 ---
 
 <Layout title="Coolify Service Templates">
-  <ViewTransitions />
+  <ClientRouter />
   <main>
     <h1>
       Coolify Service Templates
